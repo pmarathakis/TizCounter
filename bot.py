@@ -238,7 +238,7 @@ async def backfill(interaction: discord.Interaction, channel: discord.TextChanne
 async def debug(interaction: discord.Interaction, channel: discord.TextChannel):
     with get_db() as conn:
         rows = conn.execute(
-            "SELECT user_id, week_start, posted_at FROM weekly_posts WHERE channel_id=? LIMIT 10",
+            "SELECT user_id, week_start, posted_at FROM weekly_posts WHERE channel_id=? ORDER BY week_start DESC LIMIT 20",
             (str(channel.id),)
         ).fetchall()
     if not rows:
@@ -418,6 +418,7 @@ async def leaderboard(interaction: discord.Interaction, channel: discord.TextCha
 @app_commands.describe(channel="The tracked channel to report on")
 async def report(interaction: discord.Interaction, channel: discord.TextChannel):
     await interaction.response.defer()
+
 
     guild_id = str(interaction.guild_id)
     channel_id = str(channel.id)
