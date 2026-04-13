@@ -397,7 +397,7 @@ async def mystats(interaction: discord.Interaction, channel: discord.TextChannel
     streak = streaks.get(user_id, 0)
     streak_str = f"  🔥 {streak} week streak" if streak >= 2 else ""
 
-    date_headers = "   ".join(ws[5:] for ws in week_starts)
+    date_headers = "  ".join(ws[5:] for ws in week_starts)
     week_row = "      ".join("✓" if data["weeks"][ws] else "✗" for ws in week_starts)
     divider = "─" * (len(date_headers) + 2)
 
