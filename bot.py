@@ -233,6 +233,20 @@ async def backfill(interaction: discord.Interaction, channel: discord.TextChanne
         f"✅ Backfilled {count} messages from {channel.mention}.", ephemeral=True
     )
 
+@bot.tree.command(name="debug", description="Show raw DB entries for a channel.")
+@app_commands.checks.has_permissions(manage_channels=True)
+async def debug(interaction: discord.Interaction, channel: discord.TextChannel):
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT user_id, week_start, posted_at FROM weekly_posts WHERE channel_id=? LIMIT 10",
+            (str(channel.id),)
+        ).fetchall()
+    if not rows:
+        await interaction.response.send_message("No rows found for that channel.", ephemeral=True)
+        return
+    lines = [f"`{r['user_id']} | {r['week_start']} | {r['posted_at']}`" for r in rows]
+    await interaction.response.send_message("\n".join(lines), ephemeral=True)
+
 @bot.tree.command(name="track-channel", description="Start tracking weekly posts in a channel (admin only).")
 @app_commands.describe(channel="The channel to track")
 @app_commands.checks.has_permissions(manage_channels=True)
