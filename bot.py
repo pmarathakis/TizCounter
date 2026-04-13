@@ -357,7 +357,7 @@ async def stats(
                 except discord.NotFound:
                     pass
             name = (member.display_name if member else f"User {user_id[:6]}")[:20]
-            week_row = "     ".join("✓" if data["weeks"][ws] else "✗" for ws in week_starts)
+            week_row = "      ".join("✓" if data["weeks"][ws] else "✗" for ws in week_starts)
             lines.append(f"{name:<22} {week_row}   ({data['weeks_posted']}/{weeks})")
         except Exception as e:
             log.error(f"Error processing user {user_id}: {e}")
