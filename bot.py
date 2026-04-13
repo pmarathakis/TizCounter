@@ -338,6 +338,7 @@ async def stats(
 
     # Sort users by weeks posted (desc)
     sorted_users = sorted(user_data.items(), key=lambda x: x[1]["weeks_posted"], reverse=True)
+    log.info(f"sorted_users count: {len(sorted_users)}")
 
     # Build header row (abbreviated dates)
     date_headers = "  ".join(ws[5:] for ws in week_starts)  # MM-DD
@@ -347,14 +348,19 @@ async def stats(
     lines.append(f"{'User':<22} {date_headers}")
     lines.append("─" * (22 + len(date_headers) + 2))
 
-    for user_id, data in sorted_users[:25]:  # cap at 25 users
+    for user_id, data in sorted_users[:25]:
+    try:
         member = interaction.guild.get_member(int(user_id))
         if not member:
-                try:
-                        member = await interaction.guild.fetch_member(int(user_id))
-                except discord.NotFound:
-                        pass
+            try:
+                member = await interaction.guild.fetch_member(int(user_id))
+            except discord.NotFound:
+                pass
         name = (member.display_name if member else f"User {user_id[:6]}")[:20]
+        week_row = "  ".join("✓" if data["weeks"][ws] else "✗" for ws in week_starts)
+        lines.append(f"{name:<22} {week_row}   ({data['weeks_posted']}/{weeks})")
+    except Exception as e:
+        log.error(f"Error processing user {user_id}: {e}")
 
     lines.append("```")
 
