@@ -408,6 +408,83 @@ async def mystats(interaction: discord.Interaction, channel: discord.TextChannel
         ephemeral=True
     )
 
+@bot.tree.command(name="server-leaderboard", description="Show posting leaderboard across all tracked channels.")
+@app_commands.describe(
+    month="Month to filter by (1-12, default: all time)",
+    year="Year to filter by (e.g. 2026, default: current year)"
+)
+async def server_leaderboard(interaction: discord.Interaction, month: int = None, year: int = None):
+    await interaction.response.defer()
+
+    guild_id = str(interaction.guild_id)
+    channel_ids = get_tracked_channels(guild_id)
+
+    if not channel_ids:
+        await interaction.followup.send("No channels are being tracked yet.", ephemeral=True)
+        return
+
+    if year is None:
+        year = datetime.now(timezone.utc).year
+
+    # Tally weeks posted per user across all tracked channels
+    user_totals = defaultdict(int)
+
+    with get_db() as conn:
+        for channel_id in channel_ids:
+            if month is not None:
+                month_str = f"{year}-{month:02d}"
+                rows = conn.execute(
+                    """SELECT user_id, COUNT(DISTINCT week_start) as weeks_posted
+                       FROM weekly_posts
+                       WHERE guild_id=? AND channel_id=? AND week_start LIKE ?
+                       GROUP BY user_id""",
+                    (guild_id, channel_id, f"{month_str}%")
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """SELECT user_id, COUNT(DISTINCT week_start) as weeks_posted
+                       FROM weekly_posts
+                       WHERE guild_id=? AND channel_id=?
+                       GROUP BY user_id""",
+                    (guild_id, channel_id)
+                ).fetchall()
+
+            for row in rows:
+                user_totals[row["user_id"]] += row["weeks_posted"]
+
+    if not user_totals:
+        await interaction.followup.send("No data for that period.", ephemeral=True)
+        return
+
+    ranked = sorted(user_totals.items(), key=lambda x: x[1], reverse=True)
+
+    # Build channel mentions for the header
+    channel_mentions = []
+    for cid in channel_ids:
+        ch = interaction.guild.get_channel(int(cid))
+        channel_mentions.append(ch.mention if ch else f"<#{cid}>")
+
+    title_period = f"{year}-{month:02d}" if month is not None else "all time"
+    medals = ["🥇", "🥈", "🥉"]
+    lines = []
+
+    for i, (user_id, total) in enumerate(ranked[:10]):
+        member = interaction.guild.get_member(int(user_id))
+        if not member:
+            try:
+                member = await interaction.guild.fetch_member(int(user_id))
+            except discord.NotFound:
+                pass
+        name = member.display_name if member else f"User {user_id[:6]}"
+        pos = medals[i] if i < 3 else f"`{i+1}.`"
+        lines.append(f"{pos} **{name}** — {total} weeks posted")
+
+    await interaction.followup.send(
+        f"🏆 **Server Leaderboard** ({title_period})\n"
+        f"Tracking: {' '.join(channel_mentions)}\n\n" +
+        "\n".join(lines)
+    )
+
 @bot.tree.command(name="leaderboard", description="Show a posting consistency leaderboard.")
 @app_commands.describe(
     channel="The tracked channel to rank",
