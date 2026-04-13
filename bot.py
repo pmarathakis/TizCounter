@@ -413,17 +413,6 @@ async def admin_error(interaction: discord.Interaction, error):
         )
 
 
-# ──────────────────────────────────────────────
-# Entry point
-# ──────────────────────────────────────────────
-
-if __name__ == "__main__":
-    if TOKEN == "YOUR_BOT_TOKEN_HERE":
-        print("⚠️  Set your bot token in the DISCORD_TOKEN environment variable.")
-        print("    export DISCORD_TOKEN=your_token_here")
-        exit(1)
-    bot.run(TOKEN)
-    
 @bot.tree.command(name="backfill", description="Backfill history for a tracked channel (admin only).")
 @app_commands.describe(
     channel="The channel to backfill",
@@ -456,3 +445,15 @@ async def backfill(interaction: discord.Interaction, channel: discord.TextChanne
     await interaction.followup.send(
         f"✅ Backfilled {count} messages from {channel.mention}.", ephemeral=True
     )
+
+# ──────────────────────────────────────────────
+# Entry point
+# ──────────────────────────────────────────────
+
+if __name__ == "__main__":
+    if TOKEN == "YOUR_BOT_TOKEN_HERE":
+        print("⚠️  Set your bot token in the DISCORD_TOKEN environment variable.")
+        print("    export DISCORD_TOKEN=your_token_here")
+        exit(1)
+    bot.run(TOKEN)
+    
