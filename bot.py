@@ -279,9 +279,9 @@ async def stats(
             ephemeral=True
         )
         return
-
+    
     user_data, week_starts = get_stats(guild_id, channel_id, weeks)
-
+    log.info(f"Querying from week_start >= {week_starts[0]}, channel={channel_id}, guild={guild_id}")
     if not user_data:
         await interaction.followup.send(
             f"No posts recorded in {channel.mention} yet.",
@@ -423,3 +423,36 @@ if __name__ == "__main__":
         print("    export DISCORD_TOKEN=your_token_here")
         exit(1)
     bot.run(TOKEN)
+    
+@bot.tree.command(name="backfill", description="Backfill history for a tracked channel (admin only).")
+@app_commands.describe(
+    channel="The channel to backfill",
+    limit="How many messages to scan (default 1000, max 10000)"
+)
+@app_commands.checks.has_permissions(manage_channels=True)
+async def backfill(interaction: discord.Interaction, channel: discord.TextChannel, limit: int = 1000):
+    await interaction.response.defer(ephemeral=True)
+
+    guild_id = str(interaction.guild_id)
+    channel_id = str(channel.id)
+
+    if not is_tracked(guild_id, channel_id):
+        await interaction.followup.send(f"{channel.mention} is not tracked.", ephemeral=True)
+        return
+
+    limit = max(1, min(limit, 10000))
+    count = 0
+
+    async for message in channel.history(limit=limit, oldest_first=True):
+        if not message.author.bot:
+            record_post(
+                guild_id,
+                channel_id,
+                str(message.author.id),
+                message.created_at.replace(tzinfo=timezone.utc)
+            )
+            count += 1
+
+    await interaction.followup.send(
+        f"✅ Backfilled {count} messages from {channel.mention}.", ephemeral=True
+    )
