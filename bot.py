@@ -349,24 +349,61 @@ async def stats(
     lines.append("─" * (22 + len(date_headers) + 2))
 
     for user_id, data in sorted_users[:25]:
-    try:
-        member = interaction.guild.get_member(int(user_id))
-        if not member:
-            try:
-                member = await interaction.guild.fetch_member(int(user_id))
-            except discord.NotFound:
-                pass
-        name = (member.display_name if member else f"User {user_id[:6]}")[:20]
-        week_row = "  ".join("✓" if data["weeks"][ws] else "✗" for ws in week_starts)
-        lines.append(f"{name:<22} {week_row}   ({data['weeks_posted']}/{weeks})")
-    except Exception as e:
-        log.error(f"Error processing user {user_id}: {e}")
+        try:
+            member = interaction.guild.get_member(int(user_id))
+            if not member:
+                try:
+                    member = await interaction.guild.fetch_member(int(user_id))
+                except discord.NotFound:
+                    pass
+            name = (member.display_name if member else f"User {user_id[:6]}")[:20]
+            week_row = "  ".join("✓" if data["weeks"][ws] else "✗" for ws in week_starts)
+            lines.append(f"{name:<22} {week_row}   ({data['weeks_posted']}/{weeks})")
+        except Exception as e:
+            log.error(f"Error processing user {user_id}: {e}")
 
     lines.append("```")
 
     lines.append("✓ = posted at least once that week  ✗ = no post")
     await interaction.followup.send("\n".join(lines))
 
+@bot.tree.command(name="mystats", description="Show your own weekly posting stats.")
+@app_commands.describe(
+    channel="The tracked channel to view",
+    weeks="Number of weeks to look back (default: 8)"
+)
+async def mystats(interaction: discord.Interaction, channel: discord.TextChannel, weeks: int = 8):
+    await interaction.response.defer(ephemeral=True)
+
+    guild_id = str(interaction.guild_id)
+    channel_id = str(channel.id)
+    user_id = str(interaction.user.id)
+    weeks = max(1, min(weeks, 520))
+
+    if not is_tracked(guild_id, channel_id):
+        await interaction.followup.send(f"{channel.mention} is not tracked.", ephemeral=True)
+        return
+
+    user_data, week_starts = get_stats(guild_id, channel_id, weeks)
+
+    if user_id not in user_data:
+        await interaction.followup.send(
+            f"No posts recorded for you in {channel.mention}.", ephemeral=True
+        )
+        return
+
+    data = user_data[user_id]
+    week_row = "  ".join("✓" if data["weeks"][ws] else "✗" for ws in week_starts)
+    streaks = calculate_streaks(guild_id, channel_id)
+    streak = streaks.get(user_id, 0)
+    streak_str = f"  🔥 {streak} week streak" if streak >= 2 else ""
+
+    await interaction.followup.send(
+        f"**Your stats in #{channel.name} (last {weeks} weeks):**\n"
+        f"```{week_row}```"
+        f"{data['weeks_posted']}/{weeks} weeks posted{streak_str}",
+        ephemeral=True
+    )
 
 @bot.tree.command(name="leaderboard", description="Show a posting consistency leaderboard.")
 @app_commands.describe(channel="The tracked channel to rank")
