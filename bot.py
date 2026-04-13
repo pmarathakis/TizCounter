@@ -393,14 +393,17 @@ async def mystats(interaction: discord.Interaction, channel: discord.TextChannel
         return
 
     data = user_data[user_id]
-    week_row = "  ".join("✓" if data["weeks"][ws] else "✗" for ws in week_starts)
     streaks = calculate_streaks(guild_id, channel_id)
     streak = streaks.get(user_id, 0)
     streak_str = f"  🔥 {streak} week streak" if streak >= 2 else ""
 
+    date_headers = "   ".join(ws[5:] for ws in week_starts)
+    week_row = "      ".join("✓" if data["weeks"][ws] else "✗" for ws in week_starts)
+    divider = "─" * (len(date_headers) + 2)
+
     await interaction.followup.send(
         f"**Your stats in #{channel.name} (last {weeks} weeks):**\n"
-        f"```{week_row}```"
+        f"```{date_headers}\n{divider}\n{week_row}```"
         f"{data['weeks_posted']}/{weeks} weeks posted{streak_str}",
         ephemeral=True
     )
