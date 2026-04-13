@@ -357,7 +357,7 @@ async def stats(
                 except discord.NotFound:
                     pass
             name = (member.display_name if member else f"User {user_id[:6]}")[:20]
-            week_row = "  ".join("✓" if data["weeks"][ws] else "✗" for ws in week_starts)
+            week_row = "     ".join("✓" if data["weeks"][ws] else "✗" for ws in week_starts)
             lines.append(f"{name:<22} {week_row}   ({data['weeks_posted']}/{weeks})")
         except Exception as e:
             log.error(f"Error processing user {user_id}: {e}")
@@ -406,54 +406,73 @@ async def mystats(interaction: discord.Interaction, channel: discord.TextChannel
     )
 
 @bot.tree.command(name="leaderboard", description="Show a posting consistency leaderboard.")
-@app_commands.describe(channel="The tracked channel to rank")
-async def leaderboard(interaction: discord.Interaction, channel: discord.TextChannel):
+@app_commands.describe(
+    channel="The tracked channel to rank",
+    month="Month to filter by (1-12, default: all time)",
+    year="Year to filter by (e.g. 2026, default: current year)"
+)
+async def leaderboard(interaction: discord.Interaction, channel: discord.TextChannel, month: int = None, year: int = None):
     await interaction.response.defer()
 
     guild_id = str(interaction.guild_id)
     channel_id = str(channel.id)
 
     if not is_tracked(guild_id, channel_id):
-        await interaction.followup.send(
-            f"{channel.mention} is not tracked.", ephemeral=True
-        )
+        await interaction.followup.send(f"{channel.mention} is not tracked.", ephemeral=True)
         return
 
-    user_data, week_starts = get_stats(guild_id, channel_id, 12)
+    if year is None:
+        year = datetime.now(timezone.utc).year
+
+    # Build list of week_starts that fall within the requested month/year
+    with get_db() as conn:
+        if month is not None:
+            # Filter to weeks that started in the given month/year
+            month_str = f"{year}-{month:02d}"
+            rows = conn.execute(
+                """SELECT user_id, COUNT(DISTINCT week_start) as weeks_posted
+                   FROM weekly_posts
+                   WHERE guild_id=? AND channel_id=? AND week_start LIKE ?
+                   GROUP BY user_id""",
+                (guild_id, channel_id, f"{month_str}%")
+            ).fetchall()
+            title_period = f"{year}-{month:02d}"
+        else:
+            rows = conn.execute(
+                """SELECT user_id, COUNT(DISTINCT week_start) as weeks_posted
+                   FROM weekly_posts
+                   WHERE guild_id=? AND channel_id=?
+                   GROUP BY user_id""",
+                (guild_id, channel_id)
+            ).fetchall()
+            title_period = "all time"
+
+    if not rows:
+        await interaction.followup.send("No data for that period.", ephemeral=True)
+        return
+
     streaks = calculate_streaks(guild_id, channel_id)
-
-    if not user_data:
-        await interaction.followup.send("No data yet.", ephemeral=True)
-        return
-
-    # Sort by weeks posted, then streak
-    ranked = sorted(
-        user_data.items(),
-        key=lambda x: (x[1]["weeks_posted"], streaks.get(x[0], 0)),
-        reverse=True
-    )
+    ranked = sorted(rows, key=lambda r: (r["weeks_posted"], streaks.get(r["user_id"], 0)), reverse=True)
 
     medals = ["🥇", "🥈", "🥉"]
     lines = []
 
-    for i, (user_id, data) in enumerate(ranked[:10]):
+    for i, row in enumerate(ranked[:10]):
+        user_id = row["user_id"]
         member = interaction.guild.get_member(int(user_id))
         if not member:
-                try:
-                        member = await interaction.guild.fetch_member(int(user_id))
-                except discord.NotFound:
-                        pass
-        name = (member.display_name if member else f"User {user_id[:6]}")[:20]
-
+            try:
+                member = await interaction.guild.fetch_member(int(user_id))
+            except discord.NotFound:
+                pass
+        name = member.display_name if member else f"User {user_id[:6]}"
         pos = medals[i] if i < 3 else f"`{i+1}.`"
         streak = streaks.get(user_id, 0)
         streak_str = f"🔥 {streak}w streak" if streak >= 2 else ""
-        lines.append(
-            f"{pos} **{name}** — {data['weeks_posted']}/12 weeks {streak_str}"
-        )
+        lines.append(f"{pos} **{name}** — {row['weeks_posted']} weeks {streak_str}")
 
     await interaction.followup.send(
-        f"🏆 **Leaderboard — #{channel.name}** (last 12 weeks)\n" + "\n".join(lines)
+        f"🏆 **Leaderboard — #{channel.name}** ({title_period})\n" + "\n".join(lines)
     )
 
 
