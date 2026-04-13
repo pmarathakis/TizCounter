@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 # Config
 # ──────────────────────────────────────────────
 TOKEN = os.environ.get("DISCORD_TOKEN", "YOUR_BOT_TOKEN_HERE")
-DB_PATH = "tracker.db"
+DB_PATH = "data/tracker.db"
 
 # ──────────────────────────────────────────────
 # Database
