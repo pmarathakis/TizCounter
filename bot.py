@@ -431,26 +431,28 @@ async def server_leaderboard(interaction: discord.Interaction, month: int = None
 
     with get_db() as conn:
         for channel_id in channel_ids:
-            if month is not None:
-                month_str = f"{year}-{month:02d}"
-                rows = conn.execute(
-                    """SELECT user_id, COUNT(DISTINCT week_start) as weeks_posted
-                       FROM weekly_posts
-                       WHERE guild_id=? AND channel_id=? AND week_start LIKE ?
-                       GROUP BY user_id""",
-                    (guild_id, channel_id, f"{month_str}%")
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    """SELECT user_id, COUNT(DISTINCT week_start) as weeks_posted
-                       FROM weekly_posts
-                       WHERE guild_id=? AND channel_id=?
-                       GROUP BY user_id""",
-                    (guild_id, channel_id)
-                ).fetchall()
+            if month is not None and year is None:
+                year = datetime.now(timezone.utc).year
 
-            for row in rows:
-                user_totals[row["user_id"]] += row["weeks_posted"]
+            if month is not None:
+                date_filter = f"{year}-{month:02d}%"
+                params = (guild_id, channel_id, date_filter)
+                title_period = f"{year}-{month:02d}"
+            elif year is not None:
+                date_filter = f"{year}%"
+                params = (guild_id, channel_id, date_filter)
+                title_period = str(year)
+            else:
+                params = (guild_id, channel_id)
+                title_period = "all time"
+
+            rows = conn.execute(
+                f"""SELECT user_id, COUNT(DISTINCT week_start) as weeks_posted
+                   FROM weekly_posts
+                   WHERE guild_id=? AND channel_id=? {"AND week_start LIKE ?" if year is not None else ""}
+                   GROUP BY user_id""",
+                params
+            ).fetchall()
 
     if not user_totals:
         await interaction.followup.send("No data for that period.", ephemeral=True)
@@ -506,26 +508,28 @@ async def leaderboard(interaction: discord.Interaction, channel: discord.TextCha
 
     # Build list of week_starts that fall within the requested month/year
     with get_db() as conn:
+        if month is not None and year is None:
+            year = datetime.now(timezone.utc).year
+
         if month is not None:
-            # Filter to weeks that started in the given month/year
-            month_str = f"{year}-{month:02d}"
-            rows = conn.execute(
-                """SELECT user_id, COUNT(DISTINCT week_start) as weeks_posted
-                   FROM weekly_posts
-                   WHERE guild_id=? AND channel_id=? AND week_start LIKE ?
-                   GROUP BY user_id""",
-                (guild_id, channel_id, f"{month_str}%")
-            ).fetchall()
+            date_filter = f"{year}-{month:02d}%"
+            params = (guild_id, channel_id, date_filter)
             title_period = f"{year}-{month:02d}"
+        elif year is not None:
+            date_filter = f"{year}%"
+            params = (guild_id, channel_id, date_filter)
+            title_period = str(year)
         else:
-            rows = conn.execute(
-                """SELECT user_id, COUNT(DISTINCT week_start) as weeks_posted
-                   FROM weekly_posts
-                   WHERE guild_id=? AND channel_id=?
-                   GROUP BY user_id""",
-                (guild_id, channel_id)
-            ).fetchall()
+            params = (guild_id, channel_id)
             title_period = "all time"
+
+        rows = conn.execute(
+            f"""SELECT user_id, COUNT(DISTINCT week_start) as weeks_posted
+               FROM weekly_posts
+               WHERE guild_id=? AND channel_id=? {"AND week_start LIKE ?" if year is not None else ""}
+               GROUP BY user_id""",
+            params
+        ).fetchall()
 
     if not rows:
         await interaction.followup.send("No data for that period.", ephemeral=True)
