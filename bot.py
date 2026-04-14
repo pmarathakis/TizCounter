@@ -199,14 +199,14 @@ async def on_message(message: discord.Message):
 # ──────────────────────────────────────────────
 # Slash Commands
 # ──────────────────────────────────────────────
-
 @bot.tree.command(name="backfill", description="Backfill history for a tracked channel (admin only).")
 @app_commands.describe(
     channel="The channel to backfill",
-    limit="How many messages to scan (default 1000, max 10000)"
+    limit="How many messages to scan (default 1000, max 10000)",
+    after="Only import messages after this date (format: YYYY-MM-DD)"
 )
 @app_commands.checks.has_permissions(manage_channels=True)
-async def backfill(interaction: discord.Interaction, channel: discord.TextChannel, limit: int = 1000):
+async def backfill(interaction: discord.Interaction, channel: discord.TextChannel, limit: int = 1000, after: str = None):
     await interaction.response.defer(ephemeral=True)
 
     guild_id = str(interaction.guild_id)
@@ -216,10 +216,20 @@ async def backfill(interaction: discord.Interaction, channel: discord.TextChanne
         await interaction.followup.send(f"{channel.mention} is not tracked.", ephemeral=True)
         return
 
+    after_dt = None
+    if after is not None:
+        try:
+            after_dt = datetime.strptime(after, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            await interaction.followup.send(
+                "Invalid date format. Use YYYY-MM-DD, e.g. `2025-01-01`.", ephemeral=True
+            )
+            return
+
     limit = max(1, min(limit, 10000))
     count = 0
 
-    async for message in channel.history(limit=limit, oldest_first=True):
+    async for message in channel.history(limit=limit, oldest_first=True, after=after_dt):
         if not message.author.bot:
             record_post(
                 guild_id,
@@ -229,10 +239,11 @@ async def backfill(interaction: discord.Interaction, channel: discord.TextChanne
             )
             count += 1
 
+    period_str = f"after {after}" if after else "all time"
     await interaction.followup.send(
-        f"✅ Backfilled {count} messages from {channel.mention}.", ephemeral=True
+        f"✅ Backfilled {count} messages from {channel.mention} ({period_str}).", ephemeral=True
     )
-
+    
 @bot.tree.command(name="debug", description="Show raw DB entries for a channel.")
 @app_commands.checks.has_permissions(manage_channels=True)
 async def debug(interaction: discord.Interaction, channel: discord.TextChannel):
