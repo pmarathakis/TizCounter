@@ -350,7 +350,7 @@ async def stats(
         return
 
     # Sort users by weeks posted (desc)
-    sorted_users = sorted(user_data.items(), key=lambda x: x[1]["weeks_posted"], reverse=True)
+    sorted_users = sorted(user_data.items(), key=lambda x: x[1]["weeks_posted"])
     log.info(f"sorted_users count: {len(sorted_users)}")
 
     week_headers = " ".join(str(i) for i in range(weeks))
@@ -378,7 +378,7 @@ async def stats(
         lines.append(f"{name:<10} {week_row}   ({data['weeks_posted']}/{weeks})")
 
     lines.append("```")
-    lines.append("0 = oldest week  ✓ = posted  ✗ = no post")
+    lines.append("0 = this week  ✓ = posted  ✗ = no post")
     await interaction.followup.send("\n".join(lines), ephemeral=True)
 
 @bot.tree.command(name="mystats", description="Show your own weekly posting stats.")
