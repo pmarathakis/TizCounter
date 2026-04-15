@@ -320,7 +320,7 @@ async def list_tracked(interaction: discord.Interaction):
 @bot.tree.command(name="stats", description="Show weekly posting stats for a tracked channel.")
 @app_commands.describe(
     channel="The tracked channel to view",
-    weeks="Number of weeks to look back (default: 8)"
+    weeks="Number of weeks to look back (max: 8)"
 )
 @app_commands.checks.has_permissions(manage_channels=True)
 async def stats(
@@ -353,15 +353,15 @@ async def stats(
     sorted_users = sorted(user_data.items(), key=lambda x: x[1]["weeks_posted"], reverse=True)
     log.info(f"sorted_users count: {len(sorted_users)}")
 
-    # Build header row (abbreviated dates)
-    date_headers = "  ".join(ws[5:] for ws in week_starts)  # MM-DD
+    week_headers = " ".join(str(i) for i in range(weeks))
+    divider = "─" * (10 + len(week_headers) + 2)
 
     lines = [f"**{channel.mention} — Last {weeks} weeks**"]
     lines.append(f"```")
-    lines.append(f"{'User':<22} {date_headers}")
-    lines.append("─" * (22 + len(date_headers) + 2))
+    lines.append(f"{'User':<10} {week_headers}")
+    lines.append(divider)
 
-    for user_id, data in sorted_users[:25]:
+    for user_id, data in sorted_users:
         try:
             member = interaction.guild.get_member(int(user_id))
             if not member:
@@ -369,15 +369,16 @@ async def stats(
                     member = await interaction.guild.fetch_member(int(user_id))
                 except discord.NotFound:
                     pass
-            name = (member.display_name if member else f"User {user_id[:6]}")[:20]
-            week_row = "      ".join("✓" if data["weeks"][ws] else "✗" for ws in week_starts)
-            lines.append(f"{name:<22} {week_row}   ({data['weeks_posted']}/{weeks})")
+            name = (member.display_name if member else f"User {user_id[:6]}")[:8]
         except Exception as e:
             log.error(f"Error processing user {user_id}: {e}")
+            name = f"User {user_id[:6]}"[:8]
+
+        week_row = " ".join("✓" if data["weeks"][ws] else "✗" for ws in reversed(week_starts))
+        lines.append(f"{name:<10} {week_row}   ({data['weeks_posted']}/{weeks})")
 
     lines.append("```")
-
-    lines.append("✓ = posted at least once that week  ✗ = no post")
+    lines.append("0 = oldest week  ✓ = posted  ✗ = no post")
     await interaction.followup.send("\n".join(lines))
 
 @bot.tree.command(name="mystats", description="Show your own weekly posting stats.")
