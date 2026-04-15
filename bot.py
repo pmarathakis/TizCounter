@@ -296,6 +296,7 @@ async def untrack(interaction: discord.Interaction, channel: discord.TextChannel
 
 
 @bot.tree.command(name="list-tracked", description="List all currently tracked channels.")
+@app_commands.checks.has_permissions(manage_channels=True)
 async def list_tracked(interaction: discord.Interaction):
     channel_ids = get_tracked_channels(str(interaction.guild_id))
 
@@ -321,6 +322,7 @@ async def list_tracked(interaction: discord.Interaction):
     channel="The tracked channel to view",
     weeks="Number of weeks to look back (default: 8)"
 )
+@app_commands.checks.has_permissions(manage_channels=True)
 async def stats(
     interaction: discord.Interaction,
     channel: discord.TextChannel,
@@ -383,6 +385,7 @@ async def stats(
     channel="The tracked channel to view",
     weeks="Number of weeks to look back (default: 8)"
 )
+@app_commands.checks.has_permissions(manage_channels=True)
 async def mystats(interaction: discord.Interaction, channel: discord.TextChannel, weeks: int = 8):
     await interaction.response.defer(ephemeral=True)
 
@@ -424,6 +427,7 @@ async def mystats(interaction: discord.Interaction, channel: discord.TextChannel
     month="Month to filter by (1-12, default: all time)",
     year="Year to filter by (e.g. 2026, default: current year)"
 )
+@app_commands.checks.has_permissions(manage_channels=True)
 async def server_leaderboard(interaction: discord.Interaction, month: int = None, year: int = None):
     await interaction.response.defer()
 
@@ -504,6 +508,7 @@ async def server_leaderboard(interaction: discord.Interaction, month: int = None
     month="Month to filter by (1-12, default: all time)",
     year="Year to filter by (e.g. 2026, default: current year)"
 )
+@app_commands.checks.has_permissions(manage_channels=True)
 async def leaderboard(interaction: discord.Interaction, channel: discord.TextChannel, month: int = None, year: int = None):
     await interaction.response.defer()
 
@@ -573,6 +578,7 @@ async def leaderboard(interaction: discord.Interaction, channel: discord.TextCha
 
 @bot.tree.command(name="report", description="Who posted (or missed) this week in a channel?")
 @app_commands.describe(channel="The tracked channel to report on")
+@app_commands.checks.has_permissions(manage_channels=True)
 async def report(interaction: discord.Interaction, channel: discord.TextChannel):
     await interaction.response.defer()
 
