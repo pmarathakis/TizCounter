@@ -332,7 +332,7 @@ async def stats(
 
     guild_id = str(interaction.guild_id)
     channel_id = str(channel.id)
-    weeks = max(1, min(weeks, 26))  # clamp 1-26
+    weeks = max(1, min(weeks, 8))  # clamp 1-8
     if not is_tracked(guild_id, channel_id):
         await interaction.followup.send(
             f"{channel.mention} is not being tracked. Use `/track-channel` first.",
