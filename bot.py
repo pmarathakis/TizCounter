@@ -328,7 +328,7 @@ async def stats(
     channel: discord.TextChannel,
     weeks: int = 8
 ):
-    await interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
 
     guild_id = str(interaction.guild_id)
     channel_id = str(channel.id)
@@ -430,7 +430,7 @@ async def mystats(interaction: discord.Interaction, channel: discord.TextChannel
 )
 @app_commands.checks.has_permissions(manage_channels=True)
 async def server_leaderboard(interaction: discord.Interaction, month: int = None, year: int = None):
-    await interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
 
     guild_id = str(interaction.guild_id)
     channel_ids = get_tracked_channels(guild_id)
@@ -511,7 +511,7 @@ async def server_leaderboard(interaction: discord.Interaction, month: int = None
 )
 @app_commands.checks.has_permissions(manage_channels=True)
 async def leaderboard(interaction: discord.Interaction, channel: discord.TextChannel, month: int = None, year: int = None):
-    await interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
 
     guild_id = str(interaction.guild_id)
     channel_id = str(channel.id)
@@ -581,7 +581,7 @@ async def leaderboard(interaction: discord.Interaction, channel: discord.TextCha
 @app_commands.describe(channel="The tracked channel to report on")
 @app_commands.checks.has_permissions(manage_channels=True)
 async def report(interaction: discord.Interaction, channel: discord.TextChannel):
-    await interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
 
 
     guild_id = str(interaction.guild_id)
