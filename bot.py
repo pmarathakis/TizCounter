@@ -379,7 +379,7 @@ async def stats(
 
     lines.append("```")
     lines.append("0 = oldest week  ✓ = posted  ✗ = no post")
-    await interaction.followup.send("\n".join(lines))
+    await interaction.followup.send("\n".join(lines), ephemeral=True)
 
 @bot.tree.command(name="mystats", description="Show your own weekly posting stats.")
 @app_commands.describe(
@@ -500,7 +500,7 @@ async def server_leaderboard(interaction: discord.Interaction, month: int = None
     await interaction.followup.send(
         f"🏆 **Server Leaderboard** ({title_period})\n"
         f"Tracking: {' '.join(channel_mentions)}\n\n" +
-        "\n".join(lines)
+        "\n".join(lines), ephemeral=True
     )
 
 @bot.tree.command(name="leaderboard", description="Show a posting consistency leaderboard.")
@@ -573,7 +573,7 @@ async def leaderboard(interaction: discord.Interaction, channel: discord.TextCha
         lines.append(f"{pos} **{name}** — {row['weeks_posted']} weeks {streak_str}")
 
     await interaction.followup.send(
-        f"🏆 **Leaderboard — #{channel.name}** ({title_period})\n" + "\n".join(lines)
+        f"🏆 **Leaderboard — #{channel.name}** ({title_period})\n" + "\n".join(lines), ephemeral=True
     )
 
 
@@ -610,7 +610,7 @@ async def report(interaction: discord.Interaction, channel: discord.TextChannel)
     await interaction.followup.send(
         f"📅 **Weekly Report — #{channel.name}** (week of {current_week})\n\n"
         f"✅ **Posted ({len(posted)}):**\n{mention_list(posted)}\n\n"
-        f"❌ **Missed ({len(missed)}):**\n{mention_list(missed)}"
+        f"❌ **Missed ({len(missed)}):**\n{mention_list(missed)}", ephemeral=True
     )
 
 
